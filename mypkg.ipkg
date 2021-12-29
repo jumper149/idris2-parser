@@ -1,0 +1,16 @@
+package parser
+
+modules = Control.Grammar
+        , Control.Grammar.Char
+        , Control.Grammar.Combinators
+        , Main
+
+main = Main
+
+depends = contrib
+        , elab-util
+        , sop
+
+executable = parser
+
+sourcedir = "src"
