@@ -10,7 +10,6 @@ public export
 data ParseError : e -> Type where
   ErrorEmpty : ParseError e
   ErrorNotEmpty : ParseError e
-  ErrorNoConsumption : ParseError e
   Error : e -> ParseError e
 
 -- e: Error
