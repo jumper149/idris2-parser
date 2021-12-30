@@ -9,6 +9,7 @@ import Generics.Derive
 public export
 data ParseError : e -> Type where
   ErrorEmpty : ParseError e
+  ErrorNotEmpty : ParseError e
   ErrorNoConsumption : ParseError e
   Error : e -> ParseError e
 
@@ -82,7 +83,7 @@ runParser l p = case p of
   Fail error => (Left error, l)
   End => case l of
     [] => (Right (), l)
-    x :: xs => (Left ?noEndErr, l)
+    x :: xs => (Left ErrorNotEmpty, l)
   Terminal consume => case l of
     [] => (Left ErrorEmpty, l)
     x :: xs => case consume x of

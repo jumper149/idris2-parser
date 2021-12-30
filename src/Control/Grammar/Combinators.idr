@@ -1,10 +1,16 @@
 module Control.Grammar.Combinators
 
 import Control.Grammar
+import Control.Monad.Error.Interface
 import Control.Monad.Identity
 import Generics.Derive
 
 %language ElabReflection
+
+match : Eq t => e -> t -> GrammarT e t m ()
+match error x = terminal $ \ y => if x == y
+                               then pure ()
+                               else throwError error
 
 export
 optional : GrammarT e t m a -> GrammarT e t m (Maybe a)
