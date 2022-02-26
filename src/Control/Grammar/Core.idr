@@ -79,6 +79,30 @@ fail : ParseError e -> Grammar Unknown e t a
 fail = Fail
 
 public export
+failingConsumption : {cf : Consumption} -> (failing : Grammar cf e t a) -> Consumption -> Consumption
+failingConsumption failing c =
+  case failing of
+       Fail error => c
+       Return value => cf
+       End => cf
+       Consume => cf
+       Sequence gx gf => cf
+       Alternate gx gy => cf
+
+public export
+catch : (failing : Grammar cf e t a) ->
+        (catching : ParseError e -> Grammar cc e t a) ->
+        Grammar (failingConsumption failing cc) e t a
+catch failing catching =
+  case failing of
+       Fail error => catching error
+       succeeding@(Return value) => succeeding
+       succeeding@End => succeeding
+       succeeding@Consume => succeeding
+       succeeding@(Sequence gx gf) => ?succeeding1
+       succeeding@(Alternate gx gy) => ?succeeding2
+
+public export
 (<|>) : (gx : Grammar cx e t a) ->
         (gy : Lazy (Grammar cy e t a)) ->
         Grammar ((<+>) @{SemigroupAlternateConsumption} cx cy) e t a
