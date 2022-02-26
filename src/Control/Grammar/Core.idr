@@ -1,7 +1,5 @@
 module Control.Grammar.Core
 
-import Control.Monad.Identity
-import Control.Monad.Error.Interface
 import Generics.Derive
 
 %language ElabReflection
