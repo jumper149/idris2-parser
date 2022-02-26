@@ -58,16 +58,19 @@ Functor (Grammar c e t) where
     Sequence gx gf => Sequence gx $ map f . gf
     Alternate g1 g2 => Alternate (map f g1) (map f g2)
 
+export
 (<*>) : (gf : Grammar cx e t (a -> b)) ->
         (gx : Grammar cf e t a) ->
         Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
 (<*>) gf gx = Sequence gf $ \ f => map f gx
 
+export
 (<|>) : (gx : Grammar cx e t a) ->
         (gy : Lazy (Grammar cy e t a)) ->
         Grammar ((<+>) @{SemigroupAlternateConsumption} cx cy) e t a
 (<|>) = Alternate
 
+export
 (>>=) : (gx : Grammar cx e t a) ->
         (gf : a -> Grammar cf e t b) ->
         Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
