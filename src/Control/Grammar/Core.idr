@@ -32,25 +32,24 @@ data ParseError : e -> Type where
 -- c: Consumption
 -- e: Error
 -- t: Token
--- m: Monad
 -- a: return value
 public export
-data GrammarT : (c : Consumption) -> e -> t -> m -> (a : Type) -> Type where
+data Grammar : (c : Consumption) -> e -> t -> (a : Type) -> Type where
   Return : (value : a) ->
-           GrammarT Unknown e t m a
+           Grammar Unknown e t a
   Fail : (error : ParseError e) ->
-         GrammarT Unknown e t m a
-  End : GrammarT Unknown e t m ()
-  Consume : GrammarT Consuming e t m t
-  Sequence : (gx : GrammarT cx e t m a) ->
-             (gf : a -> GrammarT cf e t m b) ->
-             GrammarT ((<+>) @{SemigroupSequenceConsumption} cx cf) e t m b
-  Alternate : (gx : GrammarT cx e t m a) ->
-              (gy : Lazy (GrammarT cy e t m a)) ->
-              GrammarT ((<+>) @{SemigroupAlternateConsumption} cx cy) e t m a
+         Grammar Unknown e t a
+  End : Grammar Unknown e t ()
+  Consume : Grammar Consuming e t t
+  Sequence : (gx : Grammar cx e t a) ->
+             (gf : a -> Grammar cf e t b) ->
+             Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
+  Alternate : (gx : Grammar cx e t a) ->
+              (gy : Lazy (Grammar cy e t a)) ->
+              Grammar ((<+>) @{SemigroupAlternateConsumption} cx cy) e t a
 
 export
-Functor m => Functor (GrammarT c e t m) where
+Functor (Grammar c e t) where
   map f g = case g of
     Return value => Return $ f value
     Fail error => Fail error
@@ -59,26 +58,23 @@ Functor m => Functor (GrammarT c e t m) where
     Sequence gx gf => Sequence gx $ map f . gf
     Alternate g1 g2 => Alternate (map f g1) (map f g2)
 
-(<*>) : Applicative m =>
-        (gf : GrammarT cx e t m (a -> b)) ->
-        (gx : GrammarT cf e t m a) ->
-        GrammarT ((<+>) @{SemigroupSequenceConsumption} cx cf) e t m b
+(<*>) : (gf : Grammar cx e t (a -> b)) ->
+        (gx : Grammar cf e t a) ->
+        Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
 (<*>) gf gx = Sequence gf $ \ f => map f gx
 
-(<|>) : Applicative m =>
-        (gx : GrammarT cx e t m a) ->
-        (gy : Lazy (GrammarT cy e t m a)) ->
-        GrammarT ((<+>) @{SemigroupAlternateConsumption} cx cy) e t m a
+(<|>) : (gx : Grammar cx e t a) ->
+        (gy : Lazy (Grammar cy e t a)) ->
+        Grammar ((<+>) @{SemigroupAlternateConsumption} cx cy) e t a
 (<|>) = Alternate
 
-(>>=) : Monad m =>
-        (gx : GrammarT cx e t m a) ->
-        (gf : a -> GrammarT cf e t m b) ->
-        GrammarT ((<+>) @{SemigroupSequenceConsumption} cx cf) e t m b
+(>>=) : (gx : Grammar cx e t a) ->
+        (gf : a -> Grammar cf e t b) ->
+        Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
 (>>=) = Sequence
 
 export
-parse : List t -> GrammarT c e t m a -> (Either (ParseError e) a, List t)
+parse : List t -> Grammar c e t a -> (Either (ParseError e) a, List t)
 parse l p = case p of
   Return value => (Right value, l)
   Fail error => (Left error, l)
