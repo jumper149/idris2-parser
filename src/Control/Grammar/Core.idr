@@ -9,12 +9,14 @@ data Consumption : Type where
   Consuming : Consumption
   Unknown : Consumption
 
+public export
 [SemigroupSequenceConsumption] Semigroup Consumption where
   Consuming <+> Consuming = Consuming
   Consuming <+> Unknown = Consuming
   Unknown <+> Consuming = Consuming
   Unknown <+> Unknown = Unknown
 
+public export
 [SemigroupAlternateConsumption] Semigroup Consumption where
   Consuming <+> Consuming = Consuming
   Consuming <+> Unknown = Unknown
@@ -46,7 +48,7 @@ data Grammar : (c : Consumption) -> e -> t -> (a : Type) -> Type where
               (gy : Lazy (Grammar cy e t a)) ->
               Grammar ((<+>) @{SemigroupAlternateConsumption} cx cy) e t a
 
-export
+public export
 Functor (Grammar c e t) where
   map f g = case g of
     Return value => Return $ f value
@@ -56,25 +58,41 @@ Functor (Grammar c e t) where
     Sequence gx gf => Sequence gx $ map f . gf
     Alternate g1 g2 => Alternate (map f g1) (map f g2)
 
-export
+public export
+return : a -> Grammar Unknown e t a
+return = Return
+
+public export
 (<*>) : (gf : Grammar cx e t (a -> b)) ->
         (gx : Grammar cf e t a) ->
         Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
 (<*>) gf gx = Sequence gf $ \ f => map f gx
 
-export
-(<|>) : (gx : Grammar cx e t a) ->
-        (gy : Lazy (Grammar cy e t a)) ->
-        Grammar ((<+>) @{SemigroupAlternateConsumption} cx cy) e t a
-(<|>) = Alternate
-
-export
+public export
 (>>=) : (gx : Grammar cx e t a) ->
         (gf : a -> Grammar cf e t b) ->
         Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
 (>>=) = Sequence
 
-export
+public export
+fail : ParseError e -> Grammar Unknown e t a
+fail = Fail
+
+public export
+(<|>) : (gx : Grammar cx e t a) ->
+        (gy : Lazy (Grammar cy e t a)) ->
+        Grammar ((<+>) @{SemigroupAlternateConsumption} cx cy) e t a
+(<|>) = Alternate
+
+public export
+end : Grammar Unknown e t ()
+end = End
+
+public export
+consume : Grammar Consuming e t t
+consume = Consume
+
+public export
 parse : List t -> Grammar c e t a -> (Either (ParseError e) a, List t)
 parse l p = case p of
   Return value => (Right value, l)
