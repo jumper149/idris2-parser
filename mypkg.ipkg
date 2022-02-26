@@ -3,6 +3,7 @@ package parser
 modules = Control.Grammar
         , Control.Grammar.Char
         , Control.Grammar.Combinators
+        , Control.Grammar.Core
         , Main
 
 main = Main
