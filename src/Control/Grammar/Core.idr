@@ -38,7 +38,10 @@ data Grammar : (c : Consumption) -> e -> t -> (a : Type) -> Type where
   Return : (value : a) ->
            Grammar Unknown e t a
   Fail : (error : ParseError e) ->
-         Grammar Unknown e t a
+         Grammar c e t a
+  Catch : (failing : Grammar cf e t a) ->
+          (catching : ParseError e -> Grammar cc e t a) ->
+          Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t a
   End : Grammar Unknown e t ()
   Consume : Grammar Consuming e t t
   Sequence : (gx : Grammar cx e t a) ->
@@ -53,6 +56,7 @@ Functor (Grammar c e t) where
   map f g = case g of
     Return value => Return $ f value
     Fail error => Fail error
+    Catch failing catching => Catch (map f failing) (map f . catching)
     End => Sequence End (Return . f)
     Consume => Consume `Sequence` (Return . f)
     Sequence gx gf => Sequence gx $ map f . gf
@@ -79,28 +83,10 @@ fail : ParseError e -> Grammar Unknown e t a
 fail = Fail
 
 public export
-failingConsumption : {cf : Consumption} -> (failing : Grammar cf e t a) -> Consumption -> Consumption
-failingConsumption failing c =
-  case failing of
-       Fail error => c
-       Return value => cf
-       End => cf
-       Consume => cf
-       Sequence gx gf => cf
-       Alternate gx gy => cf
-
-public export
 catch : (failing : Grammar cf e t a) ->
         (catching : ParseError e -> Grammar cc e t a) ->
-        Grammar (failingConsumption failing cc) e t a
-catch failing catching =
-  case failing of
-       Fail error => catching error
-       succeeding@(Return value) => succeeding
-       succeeding@End => succeeding
-       succeeding@Consume => succeeding
-       succeeding@(Sequence gx gf) => ?succeeding1
-       succeeding@(Alternate gx gy) => ?succeeding2
+        Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t a
+catch = Catch
 
 public export
 (<|>) : (gx : Grammar cx e t a) ->
@@ -121,6 +107,9 @@ parse : List t -> Grammar c e t a -> (Either (ParseError e) a, List t)
 parse l p = case p of
   Return value => (Right value, l)
   Fail error => (Left error, l)
+  Catch failing catching => case parse l failing of
+    (Left error, _) => parse l $ catching error
+    success@(Right _, _) => success
   End => case l of
     [] => (Right (), l)
     x :: xs => (Left ErrorNotEmpty, l)
