@@ -60,6 +60,12 @@ public export
 (>>=) = Sequence
 
 public export
+(>>) : (gx : Grammar cx e t a) ->
+       (gy : Grammar cf e t b) ->
+       Grammar (cx || cf) e t b
+gx >> gy = gx >>= const gy
+
+public export
 fail : ParseError e -> Grammar c e t a
 fail = Fail
 
