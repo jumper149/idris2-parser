@@ -5,51 +5,32 @@ import Generics.Derive
 %language ElabReflection
 
 public export
-data Consumption : Type where
-  Consuming : Consumption
-  Unknown : Consumption
-
-public export
-[SemigroupSequenceConsumption] Semigroup Consumption where
-  Consuming <+> Consuming = Consuming
-  Consuming <+> Unknown = Consuming
-  Unknown <+> Consuming = Consuming
-  Unknown <+> Unknown = Unknown
-
-public export
-[SemigroupAlternateConsumption] Semigroup Consumption where
-  Consuming <+> Consuming = Consuming
-  Consuming <+> Unknown = Unknown
-  Unknown <+> Consuming = Unknown
-  Unknown <+> Unknown = Unknown
-
-public export
 data ParseError : e -> Type where
   ErrorEmpty : ParseError e
   ErrorNotEmpty : ParseError e
   Error : e -> ParseError e
 
--- c: Consumption
+-- c: Guaranteed Consumption
 -- e: Error
 -- t: Token
 -- a: return value
 public export
-data Grammar : (c : Consumption) -> e -> t -> (a : Type) -> Type where
+data Grammar : (c : Bool) -> e -> t -> (a : Type) -> Type where
   Return : (value : a) ->
-           Grammar Unknown e t a
+           Grammar False e t a
   Fail : (error : ParseError e) ->
          Grammar c e t a
   Catch : (failing : Grammar cf e t a) ->
           (catching : ParseError e -> Grammar cc e t a) ->
-          Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t a
-  End : Grammar Unknown e t ()
-  Consume : Grammar Consuming e t t
+          Grammar (cx && cf) e t a
+  End : Grammar False e t ()
+  Consume : Grammar True e t t
   Sequence : (gx : Grammar cx e t a) ->
              (gf : a -> Grammar cf e t b) ->
-             Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
+             Grammar (cx || cf) e t b
   Alternate : (gx : Grammar cx e t a) ->
               (gy : Lazy (Grammar cy e t a)) ->
-              Grammar ((<+>) @{SemigroupAlternateConsumption} cx cy) e t a
+              Grammar (cx && cy) e t a
 
 public export
 Functor (Grammar c e t) where
@@ -63,43 +44,43 @@ Functor (Grammar c e t) where
     Alternate g1 g2 => Alternate (map f g1) (map f g2)
 
 public export
-return : a -> Grammar Unknown e t a
+return : a -> Grammar False e t a
 return = Return
 
 public export
 (<*>) : (gf : Grammar cx e t (a -> b)) ->
         (gx : Grammar cf e t a) ->
-        Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
+        Grammar (cx || cf) e t b
 (<*>) gf gx = Sequence gf $ \ f => map f gx
 
 public export
 (>>=) : (gx : Grammar cx e t a) ->
         (gf : a -> Grammar cf e t b) ->
-        Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t b
+        Grammar (cx || cf) e t b
 (>>=) = Sequence
 
 public export
-fail : ParseError e -> Grammar Unknown e t a
+fail : ParseError e -> Grammar c e t a
 fail = Fail
 
 public export
 catch : (failing : Grammar cf e t a) ->
         (catching : ParseError e -> Grammar cc e t a) ->
-        Grammar ((<+>) @{SemigroupSequenceConsumption} cx cf) e t a
+        Grammar (cx && cf) e t a
 catch = Catch
 
 public export
 (<|>) : (gx : Grammar cx e t a) ->
         (gy : Lazy (Grammar cy e t a)) ->
-        Grammar ((<+>) @{SemigroupAlternateConsumption} cx cy) e t a
+        Grammar (cx && cy) e t a
 (<|>) = Alternate
 
 public export
-end : Grammar Unknown e t ()
+end : Grammar False e t ()
 end = End
 
 public export
-consume : Grammar Consuming e t t
+consume : Grammar True e t t
 consume = Consume
 
 public export
